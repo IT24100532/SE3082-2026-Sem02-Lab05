@@ -1,0 +1,47 @@
+Exercise 7: Area of the Mandelbrot set
+Run on: MacBook Air (Apple Silicon, 8 cores), Apple clang + libomp. Build with: make
+
+Note: the lab sheet says to use the code from the zip file, which I did not have.
+mandelbrot_serial.c is my own serial version written from the description in the lab
+sheet (2000 x 2000 grid over the upper half of the set, 2000 iterations, |z| > 2 test).
+The area value may differ slightly from the provided code.
+
+Programs:
+- mandelbrot_serial.c    serial version
+- mandelbrot_parallel.c  parallel region started before the main loop; each thread works
+                         out its own equal share of the outer loop with
+                         omp_get_thread_num() and omp_get_num_threads()
+- mandelbrot_schedule.c  extra exercise: parallel for with schedule(runtime)
+
+Variables in the parallel region:
+- numoutside: reduction(+). Each thread counts in its own copy and the copies are added
+  at the end. Without this, threads would overwrite each other's counts.
+- i, j, the c and z values, id, istart, iend: private (declared inside the region).
+- NPOINTS, MAXITER: constants, safe to share.
+
+Results (equal split of the outer loop):
+serial:     area = 1.50927891, points outside = 2926735, time = 6.67 s
+1 thread:   area = 1.50927891, points outside = 2926735, time = 6.29 s
+2 threads:  area = 1.50927891, points outside = 2926735, time = 5.45 s
+3 threads:  area = 1.50927891, points outside = 2926735, time = 5.02 s
+4 threads:  area = 1.50927891, points outside = 2926735, time = 3.01 s
+
+The area and the count are identical for every thread count, so the parallel code is
+correct.
+The time does not drop evenly. Every thread gets the same NUMBER of points, but not the
+same amount of WORK. Points inside the set need all 2000 iterations, and points far
+outside stop after a few. The threads that get the columns through the middle of the
+set do most of the work while the others finish early and wait. With 2 threads the
+run is only 1.2x faster.
+
+Extra exercise: other ways of mapping iterations to threads (4 threads, OMP_SCHEDULE):
+static      3.12 s   (same as the equal split above)
+static,1    1.72 s
+static,10   1.69 s
+dynamic     1.73 s
+dynamic,10  1.90 s
+guided      1.81 s
+
+All give the same area. Small chunks (static,1 / static,10) or dynamic scheduling mix
+the heavy and light columns between the threads, so the work is balanced. The time
+drops from 3.1 s to about 1.7 s, which is about 3.7x faster than one thread.

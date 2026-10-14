@@ -1,1 +1,23 @@
+Exercise 2: #pragma omp single
+Run on: MacBook Air (Apple Silicon, 8 cores), Apple clang + libomp. Build with: make
 
+Output (OMP_NUM_THREADS=4):
+thread # 3
+thread # 0
+thread # 2
+thread # 1
+Inside Single # 0
+Exiting Single
+Hi again from thread # 3
+Hi again from thread # 0
+Hi again from thread # 2
+Hi again from thread # 1
+
+How single works:
+The block under "single" is run by only ONE thread of the team: whichever thread reaches it
+first (here it was thread 0, but it can be any thread and can change between runs). The
+other threads skip the block.
+So "Inside Single" and "Exiting Single" are printed once, not four times.
+single also has a hidden barrier at its end: the other threads wait there until the single
+block is finished. That is why all the "Hi again" lines come after "Exiting Single".
+(Adding the nowait clause would remove that wait.)

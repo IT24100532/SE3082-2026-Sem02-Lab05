@@ -1,0 +1,25 @@
+Exercise 1: #pragma omp barrier
+Run on: MacBook Air (Apple Silicon, 8 cores), Apple clang + libomp. Build with: make
+
+Output (OMP_NUM_THREADS=4):
+thread # 2
+thread # 0
+thread # 3
+thread # 1
+Outside Barrier # 3
+Hi again from thread # 3
+Outside Barrier # 0
+Hi again from thread # 0
+Outside Barrier # 2
+Hi again from thread # 2
+Outside Barrier # 1
+Hi again from thread # 1
+
+How the barrier works:
+A barrier is a meeting point. Each thread prints "thread # ..." and then stops at the
+barrier and waits until ALL threads in the team have reached it. Only then are they all
+released to continue.
+That is why every "thread #" line is printed before any "Outside Barrier" line. The order
+of the threads inside each group is still random, because the threads run at the same time.
+Without the barrier, a fast thread could print "Outside Barrier" before a slow thread has
+printed its first line.

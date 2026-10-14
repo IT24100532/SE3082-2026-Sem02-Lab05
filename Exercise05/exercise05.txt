@@ -1,1 +1,23 @@
+Exercise 5: Fibonacci with task parallelism
+Run on: MacBook Air (Apple Silicon, 8 cores), Apple clang + libomp. Build with: make
+Program: exercise05.c (run: ./exercise05 40)
 
+How it is parallelised:
+- main starts a parallel region, and "single" lets one thread make the first call fib(n).
+- Inside fib, the two recursive calls become two tasks (#pragma omp task). Any free
+  thread in the team can pick up a task.
+- i and j are shared so the tasks can write their results back to the parent.
+- #pragma omp taskwait makes the parent wait for both tasks before returning i + j.
+- A cutoff (n < 20) switches to the plain serial function. Creating a task for tiny
+  calls costs more time than the call itself, so without the cutoff the parallel
+  version is slower than the serial one.
+
+Output for fib(40) = 102334155 (the same answer in every run):
+serial:               0.341 s
+parallel, 1 thread:   0.326 s
+parallel, 2 threads:  0.191 s
+parallel, 4 threads:  0.087 s   (about 3.9x faster than serial)
+parallel, 8 threads:  0.169 s
+
+8 threads was slower than 4 here. This machine has 4 fast cores and 4 slower
+efficiency cores, so the extra 4 threads add little and bring more overhead.

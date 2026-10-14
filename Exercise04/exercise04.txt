@@ -1,1 +1,31 @@
+Exercise 4: parallel for, with and without collapse(2)
+Run on: MacBook Air (Apple Silicon, 8 cores), Apple clang + libomp. Build with: make
+Programs: exercise04.c (parallel for) and exercise04_collapse.c (parallel for collapse(2)).
+Output below is grouped by r to make it readable (OMP_NUM_THREADS=4). The real output
+lines are mixed, because the threads print at the same time.
 
+1. #pragma omp parallel for
+   r=1 -> thread 0 for all k = 1..10
+   r=2 -> thread 0 for all k = 1..10
+   r=3 -> thread 1 for all k = 1..10
+   r=4 -> thread 2 for all k = 1..10
+   r=5 -> thread 3 for all k = 1..10
+
+   Only the OUTER loop (r) is shared between the threads. Its 5 iterations are split
+   into chunks: thread 0 gets r=1,2 and threads 1, 2, 3 get one r each. The inner loop
+   (k) is not parallel: each thread runs all 10 values of k by itself for its own r.
+   So one r value always belongs to one thread. With more than 5 threads, only 5 of
+   them get any work, because there are only 5 outer iterations.
+
+2. #pragma omp parallel for collapse(2)
+   r=1 -> k1-10: thread 0
+   r=2 -> k1-3: thread 0, k4-10: thread 1
+   r=3 -> k1-6: thread 1, k7-10: thread 2
+   r=4 -> k1-8: thread 2, k9-10: thread 3
+   r=5 -> k1-10: thread 3
+
+   collapse(2) joins the two loops into ONE loop of 5 x 10 = 50 iterations, and those
+   50 iterations are split between the threads: 13, 13, 12 and 12 each. Now a single r
+   value can be shared by two threads (for example r=2 is split between threads 0 and 1).
+   The work is divided more evenly, and all threads get work even when there are more
+   threads than outer iterations.
