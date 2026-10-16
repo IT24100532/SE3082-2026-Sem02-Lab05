@@ -63,3 +63,5 @@ Exercise07/area
 Exercise07/area_parallel
 Exercise07/area_schedule
 .DS_Store
+Exercise08/MolDyn/md_serial
+Exercise08/MolDyn/md_omp

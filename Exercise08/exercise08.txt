@@ -1,0 +1,54 @@
+Exercise 8 (sheet: "Exercise 6: Molecular Dynamics"): OpenMP critical and reduction
+Run on: MacBook Air (Apple Silicon, 8 cores), Apple clang + libomp.
+Build: cd MolDyn && make     Run: ./md_serial   and   OMP_NUM_THREADS=<n> OMP_SCHEDULE=static,<n> ./md_omp
+
+The code (MolDyn/) simulates 8788 argon atoms, starting on an FCC lattice in a box with
+periodic boundary conditions, with the Lennard-Jones potential. Each step of the main loop
+(main.c) calls domove, forces, mkekin, velavg and prnout, as described in the lab sheet.
+md_serial is built with forces.c, md_omp with forces_omp.c (the parallel version).
+
+Parallelisation of forces (forces_omp.c):
+1. "#pragma omp parallel for" on the outer loop over atoms i.
+   - private: everything declared inside the loop (xi, yi, zi, fxi, fyi, fzi, j, xx, yy,
+     zz, rd, rrd..., forcex...), so every thread has its own copy.
+   - shared: the positions x, the forces f, side, sideh and rcoffs.
+   - the 2 reduction variables: epot (potential energy) and vir (virial). Every thread
+     adds into its own copy and OpenMP adds the copies together at the end.
+2. The variable that must be updated atomically is the force array f. Each pair (i, j)
+   adds a force to atom i AND subtracts it from atom j (Newton's third law). Two threads
+   working on different atoms i can update the same f[j] at the same time, which is a
+   data race. So "f[j] -= force" is inside "#pragma omp critical", and so is the final
+   "f[i] += fxi", because atom i can be another thread's atom j.
+
+Results compared with the serial output (OMP_SCHEDULE=static):
+serial, 2, 3 and 4 threads all print exactly the same values at every step, for example:
+step    ekin/N        epot/N        etot/N        temp        pres       vel     count
+  20      1.083000     -5.943901     -4.860901    0.722000   -1.633301   0.97994    888
+So the parallel version is correct.
+
+Time (whole run, almost all of it in forces):
+serial       1.28 s
+2 threads    1.55 s
+3 threads    1.13 s
+4 threads    0.92 s
+
+The speedup is small: every pair of atoms closer than the cut-off goes through the
+critical section, so the threads spend much of their time waiting for each other.
+
+Effect of schedule(static,n), 4 threads:
+static       1.00 s
+static,1     0.64 s
+static,4     0.64 s
+static,16    0.63 s
+static,64    0.64 s
+static,256   0.64 s
+dynamic,16   0.70 s
+
+Yes, the schedule has a big effect. Atom i only looks at atoms j > i, so the first atoms
+have much more work than the last ones. With plain static the first thread gets the most
+expensive block of atoms and the others wait for it. With static,n the atoms are dealt out
+in small chunks in turn, so every thread gets a mix of expensive and cheap atoms. Any
+chunk size from 1 to 256 gives about the same time (0.63 s, 2x faster than serial);
+dynamic is a little slower because of the extra cost of handing out the chunks.
+With 8 threads (static,1) the run takes 4.04 s, much slower: more threads compete for the
+same critical section, and 4 of this machine's 8 cores are slower efficiency cores.
