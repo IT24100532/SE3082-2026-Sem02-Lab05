@@ -12,8 +12,8 @@ CFLAGS := -O2 -Wall
 
 PROGS := Exercise01/exercise01 Exercise02/exercise02 Exercise03/exercise03 \
          Exercise04/exercise04 Exercise04/exercise04_collapse Exercise05/exercise05 \
-         Exercise06/exercise06 Exercise07/mandelbrot_serial Exercise07/mandelbrot_parallel \
-         Exercise07/mandelbrot_schedule
+         Exercise06/exercise06 Exercise07/area Exercise07/area_parallel \
+         Exercise07/area_schedule
 
 all: $(PROGS)
 
